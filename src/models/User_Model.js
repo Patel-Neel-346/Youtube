@@ -61,20 +61,19 @@ const UserSchema=new mongoose.Schema({
 
 //this middleware is used for saving schema it means this middleware run every time where user made any changes into user schema
 
-UserSchema.pre("save",function(next){
+UserSchema.pre("save", async function(next){
     if(!this.isModified("password")){
-        next();
+        return next();
     }
 
-    this.password=bcrypt.hash(this.password,10);
-    console.log(this.password);
+    this.password = await bcrypt.hashSync(this.password, 10);
     next();
 })
 
 
 //this method is used for comparing password
-UserSchema.methods.isPasswordCorrect=async function(password){
-    return bcrypt.compare(password,this.password);
+UserSchema.methods.isPasswordCorrect=async function(password1){
+    return await bcrypt.compareSync(password1,this.password);
 }
 
 //this method is used for Refresh generating token

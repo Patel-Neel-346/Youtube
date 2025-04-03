@@ -25,7 +25,12 @@ app.use(express.urlencoded({limit:"30mb",extended:true}));
 app.use(express.static("public"));
 app.use(cookieParser());    //cookie parser middleware
 
+//import routes here
+import UserRoute from "./routes/User_Route.js";
 
+
+//use Router
+app.use('/api/v1/user',UserRoute)
 
 //routes
 app.get("/", (req, res) => {
