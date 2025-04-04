@@ -203,4 +203,25 @@ export const loginUser=asyncHandler(async(req,res,next)=>{
                 "User logged in successFully!"
             )
         )
+})
+
+export const LogoutUser=asyncHandler(async(req,res)=>{
+    //logout user algorithm
+
+    //1.get user data from Verify Token User middleware
+    //2.accroding to User id  find user and update Refresh token i means unset Refresh  TOken
+    //3.clear cookies and send Respone to frontend
+
+
+    //1.get user data from Verify Token User middleware
+    if(!req.user){
+        throw new ApiError(401,"Unauthorized User!!");
+    }
+
+    const user=await User.findByIdAndUpdate(req.user._id,{
+        $unset:{
+            refreshToken:1,
+        },
     })
+});
+
