@@ -213,15 +213,33 @@ export const LogoutUser=asyncHandler(async(req,res)=>{
     //3.clear cookies and send Respone to frontend
 
 
-    //1.get user data from Verify Token User middleware
-    if(!req.user){
-        throw new ApiError(401,"Unauthorized User!!");
-    }
+    try {
+        //1.get user data from Verify Token User middleware
+        if(!req.user){
+            throw new ApiError(401,"Unauthorized User!!");
+        }
+        
+        //2.accroding to User id  find user and update Refresh token i means unset Refresh  TOken
+        const user=await User.findByIdAndUpdate(req.user._id,{
+            $unset:{
+                refreshToken:1,
+            },
+        })
 
-    const user=await User.findByIdAndUpdate(req.user._id,{
-        $unset:{
-            refreshToken:1,
-        },
-    })
+        //3.clear cookies and send Respone to frontend
+        return res
+        .status(200)
+        .clearCookie("accessToken",signedCookiesOptions)
+        .clearCookie("refreshToken",signedCookiesOptions)
+        .json(
+            new ApiRes(
+                200,
+                {},
+                "User Logout SuccessFully!"
+            )
+        )
+    } catch (error) {
+        throw new ApiError(500,"Something went wrong while Logout user")
+    }
 });
 
