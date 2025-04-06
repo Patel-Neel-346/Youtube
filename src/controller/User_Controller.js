@@ -3,7 +3,7 @@ import { ApiError } from "../utils/ApiError.js"
 import User from "../models/User_Model.js";
 import {uploadOnCloudinary} from '../utils/Cloudinary.js'
 import {ApiRes} from '../utils/ApiRes.js'
-
+import jwt from "jsonwebtoken"
 const signedCookiesOptions = {
     httpOnly: true,
     secure: true,
@@ -19,7 +19,11 @@ const GenerateAccessTokenAndRefreshToken=async(userId)=>{
 
         const RefreshToken=await user.generateRefreshToken()
         const AccessToken=await user.generateAccessToken()
-    
+        
+        // console.log(RefreshToken,AccessToken)
+        // console.log("Refresh Token:",RefreshToken)
+        // console.log("Access Token:",AccessToken)
+        
         user.refreshToken=RefreshToken;
         user.save({validateBeforeSave:false})//here this validateBeforeSave method false means if Model has In default validation and For saving on field and for temp ignore validation on all feild then user this
     
@@ -181,8 +185,8 @@ export const loginUser=asyncHandler(async(req,res,next)=>{
         }
 
         //6.if user exits then generate an refresh and accessToken for user
-        const {RefreshToken,AccessToken} = GenerateAccessTokenAndRefreshToken(user._id)
-
+        const {RefreshToken,AccessToken} = await GenerateAccessTokenAndRefreshToken(user._id)
+        // console.log(RefreshToken,AccessToken)
 
         //7.then send that token with cookies to frontend
 
@@ -225,6 +229,7 @@ export const LogoutUser=asyncHandler(async(req,res)=>{
                 refreshToken:1,
             },
         })
+        // console.log(user)
 
         //3.clear cookies and send Respone to frontend
         return res
@@ -243,3 +248,55 @@ export const LogoutUser=asyncHandler(async(req,res)=>{
     }
 });
 
+export const RefreshAccessToken=asyncHandler(async(req,res)=>{
+   try {
+     //get token from cookies that comes from frontend
+     const inComingRefreshToken=req.signedCookies.refreshToken || req.header("Authorization")?.replace("Bearer ","")
+ 
+     console.log("Incoming refresh token:",inComingRefreshToken)
+ 
+     //check token is valid or not
+     if(!inComingRefreshToken){
+         throw new ApiError(401,"Unauthorized User!!")
+     }
+ 
+     //verify token
+     const decoedToken=jwt.verify(inComingRefreshToken,process.env.REFRESH_TOKEN_SECRET)
+ 
+     console.log("Decoded token:",decoedToken)
+ 
+     const user=await User.findById(decoedToken?._id)
+ 
+     if(!user){
+         throw new ApiError(401,"Unauthorized User!!")
+     }
+     //check refresh token is valid or not
+     if(inComingRefreshToken!==user.refreshToken){
+         throw new ApiError(401,"Unauthorized User!!")
+     }
+     //generate new access token and refresh token
+ 
+     const {RefreshToken,AccessToken}=await GenerateAccessTokenAndRefreshToken(user._id)
+ 
+ 
+     //send response to frontend with cookies
+ 
+     return res
+     .status(200)
+     .cookie("accessToken",AccessToken,signedCookiesOptions)
+     .cookie("refreshToken",RefreshToken,signedCookiesOptions)
+     .json(
+         new ApiRes(
+             200,
+             {
+                 AccessToken,
+                 RefreshToken
+             },
+             "Access token refreshed successfully!"
+         )
+     )
+   } catch (error) {
+         console.error("Error during token refresh:", error.message);
+         throw new ApiError(500,"Something went wrong while refreshing access token")
+   }
+})

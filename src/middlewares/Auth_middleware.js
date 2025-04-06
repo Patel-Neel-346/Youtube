@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
-import User from "../models/User_Model";
-import { ApiError } from "../utils/ApiError";
-import { asyncHandler } from "../utils/asyncHandler";
+import User from "../models/User_Model.js";
+import { ApiError } from "../utils/ApiError.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
 
 
 export const verifyJWT=asyncHandler(async(req,_,next)=>{
@@ -17,7 +17,8 @@ export const verifyJWT=asyncHandler(async(req,_,next)=>{
     try {
         //1. get token from cookies or header
         const token=req.signedCookies.accessToken || req.header("Auhorization")?.replace("Bearer ","")
-
+        // console.log(req.signedCookies)
+        // console.log(token)
         //2. if token exits then decoed it otherwise return res "Unauthroized"
 
         if(!token){
@@ -28,12 +29,14 @@ export const verifyJWT=asyncHandler(async(req,_,next)=>{
 
         const decoedToken = jwt.verify(token,process.env.ACCESS_TOKEN_SECRET);
 
+        // console.log(decoedToken)
         if(!decoedToken){
             return next(new ApiError(401,"Unauthroized User!"))
         }
         //4. if user is not exits then return res "Unauthroized"
         const user = await User.findById(decoedToken?._id).select("-password -refreshToken");
 
+        // console.log(user)
         if(!user){
             return next(new ApiError(401,"Unauthroized User And User Not Found!"))
         }
@@ -49,5 +52,8 @@ export const verifyJWT=asyncHandler(async(req,_,next)=>{
     } catch (error) {
         throw new ApiError(401,"Invalid Accesss Token!")
     }
+
+
+    
 
 })

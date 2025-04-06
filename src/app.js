@@ -15,6 +15,10 @@ connectDB().then(()=>{
     console.log(err);
 });
 
+
+const signedCookiesSecret =
+  process.env.COOKIEPARSER_SECRET || "I am Manish Pali";
+
 //middleware
 app.use(cors({
     origin:process.env.CORS_ORIGIN,
@@ -23,7 +27,7 @@ app.use(cors({
 app.use(express.json({limit:"30mb",extended:true}));
 app.use(express.urlencoded({limit:"30mb",extended:true}));
 app.use(express.static("public"));
-app.use(cookieParser());    //cookie parser middleware
+app.use(cookieParser(signedCookiesSecret));    //cookie parser middleware
 
 //import routes here
 import UserRoute from "./routes/User_Route.js";
