@@ -1,7 +1,7 @@
 import { asyncHandler } from "../utils/asyncHandler.js"
 import { ApiError } from "../utils/ApiError.js"
 import User from "../models/User_Model.js";
-import {uploadOnCloudinary} from '../utils/Cloudinary.js'
+import {deleteOnCloudinaryWithUrl, uploadOnCloudinary} from '../utils/Cloudinary.js'
 import {ApiRes} from '../utils/ApiRes.js'
 import jwt from "jsonwebtoken"
 const signedCookiesOptions = {
@@ -300,3 +300,254 @@ export const RefreshAccessToken=asyncHandler(async(req,res)=>{
          throw new ApiError(500,"Something went wrong while refreshing access token")
    }
 })
+
+export const getCurrentUser=asyncHandler(async(req,res)=>{
+    //1 get user from verify middleware req.user
+    const user=req.user
+
+    //2 check if user exits
+    if(!user){
+        throw new ApiError(404,"User not found");
+
+    }
+
+    //3 send response to frontend with user data
+
+    return res
+    .status(200)
+    .json(
+        new ApiRes(
+            201,
+            {user},
+            "User fetched successfully!"
+        )
+    )
+})
+
+export const changepassword=asyncHandler(async(req,res)=>{
+    
+    //1. get oldpassword and newpassword from frontend
+    const {oldPassword,newPassword}=req.body;
+
+    console.log("Old Password:",oldPassword)
+    console.log("New Password:",newPassword)
+    //2. check if oldpassword and newpassword is empty or not
+    if(!oldPassword || !newPassword){
+        throw new ApiError(400,"All fields are required")
+    }
+
+    //3. chekc if user exits or not
+    const user = await User.findById(req.user._id);
+
+    if(!user){
+        throw new ApiError(404,"User not found")
+    }
+
+    //4. ccheck if oldpasssword is correct or not
+    const isPasswordCorrectOrNot = await user.isPasswordCorrect(oldPassword)
+
+    if(!isPasswordCorrectOrNot){
+        throw new ApiError(400,"Old Password is incorrect")
+    }
+
+    //5. update password with newone
+    user.password=newPassword;
+    await user.save({validateBeforeSave:false});
+
+    //6. send response to frontend
+
+    return res
+    .status(200)
+    .json(
+        new ApiRes(
+            200,
+            {},
+            "Password changed SuccessFully!"
+        )
+    )
+})
+
+
+export const UpdateUserDetails=asyncHandler(async(req,res)=>{
+    //1 get user data from req.body
+
+    const {fullname,email}=req.body;
+
+    //2. check if user data is empty or not
+    if(!fullname || !email){
+        throw new ApiError(400,"All fields are required")
+    }
+
+    //3. get current data from req.user and proccess to get all data from data and Update or data
+
+    const user =await User.findByIdAndUpdate(req.user._id,{
+        $set:{
+            fullname:fullname,
+            email:email
+        },
+    },
+    { new:true }// this option is used to return the updated document
+    ).select("-password -refreshToken")
+
+    //3.2. check if user exits or not
+    if(!user){
+        throw new ApiError(404,"User not found")
+    }
+
+    //4. return response to frontend with updated user data
+    
+    return res
+    .status(200)
+    .json(
+    new ApiRes(
+            200,
+            user,
+            "User Details Updated SuccessFully!"
+        )
+    )
+
+})
+
+
+export const UpdateUserCoverImage=asyncHandler(async(req,res)=>{
+    //1.get user cover image from body
+
+    
+
+    //user pasethi image levi
+    //cloduinary ma upload garne update kari levi
+    // console.log(req.user)
+
+    console.log(req.file)
+
+    const coverImageLocalPath=req.file?.path;
+
+    console.log("Cover image local path:", coverImageLocalPath);
+    if(!coverImageLocalPath){
+        throw new ApiError(400,"Please provide cover image")
+    }
+
+
+       //3 delete old cover image from cloudinary
+       const user=await User.findById(req.user._id);
+    
+       console.log("User Old:",user)
+       if(!user){
+           throw new ApiError(404,"User not found at Cover Image")
+       }
+       
+       const DeletedCoverImage = await deleteOnCloudinaryWithUrl(user.coverImage,"image")
+   
+   
+   
+       if(!DeletedCoverImage){
+           throw new ApiError(400,"Cover image delete failed")
+       }
+   
+       console.log("Deleted cover image:", DeletedCoverImage);
+
+    //2.upload cover image to cloudinary
+
+    const coverImage=await uploadOnCloudinary(coverImageLocalPath)
+
+    if(!coverImage || !coverImage.url){
+        throw new ApiError(400,"Cover image upload failed")
+    }
+
+
+    //4. update user cover image in database
+    const updatedUser = await User.findByIdAndUpdate(req.user._id,{
+        $set:{
+            coverImage:coverImage.url,
+        },
+    }).select("-password -refreshToken");
+
+    const finalUser=await User.findById(updatedUser._id).select("-password -refreshToken")
+
+    //5 return response to frontend with updated user data
+
+    return res
+    .status(200)
+    .json(
+        new ApiRes(
+            200,
+            finalUser,
+            "User Cover Image Updated SuccessFully!"
+        )
+    )
+    
+
+})
+
+
+
+export const UpdateUserAvatarImage=asyncHandler(async(req,res)=>{
+    //1.get user cover image from body
+
+    
+
+    //user pasethi image levi
+    //cloduinary ma upload garne update kari levi
+    // console.log(req.user)
+
+    console.log(req.file)
+
+    const AvatarImageLocalPath=req.file?.path;
+
+    console.log("Cover image local path:", AvatarImageLocalPath);
+    if(!AvatarImageLocalPath){
+        throw new ApiError(400,"Please provide cover image")
+    }
+
+
+       //3 delete old cover image from cloudinary
+       const user=await User.findById(req.user._id);
+    
+       console.log("User Old:",user)
+       if(!user){
+           throw new ApiError(404,"User not found at Cover Image")
+       }
+       
+       const DeletedAvatarImage = await deleteOnCloudinaryWithUrl(user.avatar,"image")
+   
+   
+   
+       if(!DeletedAvatarImage){
+           throw new ApiError(400,"Cover image delete failed")
+       }
+   
+       console.log("Deleted cover image:", DeletedAvatarImage);
+
+    //2.upload cover image to cloudinary
+
+    const avatar=await uploadOnCloudinary(AvatarImageLocalPath)
+
+    if(!avatar || !avatar.url){
+        throw new ApiError(400,"Cover image upload failed")
+    }
+
+
+    //4. update user cover image in database
+    const updatedUser = await User.findByIdAndUpdate(req.user._id,{
+        $set:{
+            avatar:avatar.url,
+        },
+    }).select("-password -refreshToken");
+
+    const finalUser=await User.findById(updatedUser._id).select("-password -refreshToken")
+
+    //5 return response to frontend with updated user data
+
+    return res
+    .status(200)
+    .json(
+        new ApiRes(
+            200,
+            finalUser,
+            "User Avatar Image Updated SuccessFully!"
+        )
+    )
+    
+
+})
+
