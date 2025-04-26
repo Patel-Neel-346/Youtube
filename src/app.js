@@ -5,44 +5,47 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 dotenv.config();
 const app = express();
-const Port=process.env.PORT || 3000;
+const Port = process.env.PORT || 3000;
 // console.log(process.env.PORT);
 
 //connect to database
-connectDB().then(()=>{
+connectDB()
+  .then(() => {
     console.log("Database connected successfully!!");
-}).catch((err)=>{
+  })
+  .catch((err) => {
     console.log(err);
-});
-
+  });
 
 const signedCookiesSecret =
   process.env.COOKIEPARSER_SECRET || "I am Manish Pali";
 
 //middleware
-app.use(cors({
-    origin:process.env.CORS_ORIGIN,
-    credentials:true
-}));
-app.use(express.json({limit:"30mb",extended:true}));
-app.use(express.urlencoded({limit:"30mb",extended:true}));
+app.use(
+  cors({
+    origin: process.env.CORS_ORIGIN,
+    credentials: true,
+  })
+);
+app.use(express.json({ limit: "30mb", extended: true }));
+app.use(express.urlencoded({ limit: "30mb", extended: true }));
 app.use(express.static("public"));
-app.use(cookieParser(signedCookiesSecret));    //cookie parser middleware
+app.use(cookieParser(signedCookiesSecret)); //cookie parser middleware
 
 //import routes here
 import UserRoute from "./routes/User_Route.js";
-
+import VideoRoute from "./routes/Video_Route.js";
 
 //use Router
-app.use('/api/v1/user',UserRoute)
+app.use("/api/v1/user", UserRoute);
+app.use("/api/v1/video", VideoRoute);
 
 //routes
 app.get("/", (req, res) => {
-    res.send("Hello World");
+  res.send("Hello World");
 });
-
 
 //listen
 app.listen(Port, () => {
-    console.log(`Server is running on port ${Port}`);
+  console.log(`Server is running on port ${Port}`);
 });
