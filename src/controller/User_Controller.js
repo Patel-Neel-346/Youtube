@@ -515,58 +515,63 @@ export const UpdateUserAvatarImage = asyncHandler(async (req, res) => {
 });
 
 export const getWatchHistory = asyncHandler(async (req, res) => {
-  const user = await User.aggregate([
-    {
-      $match: {
-        _id: new mongoose.Types.ObjectId(req.user._id),
-      },
-    }, //get All User Data According to ID of User
+  try {
+    const user = await User.aggregate([
+      {
+        $match: {
+          _id: new mongoose.Types.ObjectId(req.user._id),
+        },
+      }, //get All User Data According to ID of User
 
-    {
-      $lookup: {
-        from: "Videos",
-        localField: "watchHistory",
-        foreignField: "_id",
-        as: "watchHistory", //this is lookup is used to Get Watch Videos From Video Fileds _ID
-        pipeline: [
-          {
-            $lookup: {
-              from: "Users",
-              localField: "owner",
-              foreignField: "_id",
-              as: "owner", //this lookup is used to get Videos Owner details From User Table
-              pipeline: [
-                {
-                  $project: {
-                    fullname: 1,
-                    username: 1,
-                    avatar: 1, //this Project Pipline is Used To Get Spectific Data From User Table like Fullname,username,avatar etc....
+      {
+        $lookup: {
+          from: "Videos",
+          localField: "watchHistory",
+          foreignField: "_id",
+          as: "watchHistory", //this is lookup is used to Get Watch Videos From Video Fileds _ID
+          pipeline: [
+            {
+              $lookup: {
+                from: "Users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "owner", //this lookup is used to get Videos Owner details From User Table
+                pipeline: [
+                  {
+                    $project: {
+                      fullname: 1,
+                      username: 1,
+                      avatar: 1, //this Project Pipline is Used To Get Spectific Data From User Table like Fullname,username,avatar etc....
+                    },
                   },
-                },
-              ],
-            },
-          },
-
-          {
-            $addFields: {
-              owner: {
-                $first: "$owner",
+                ],
               },
-            }, //this $addFields is used to Convert All Data into Owner fileds as Object so it easy to become for Frontend Developer
-          },
-        ],
-      },
-    },
-  ]);
-  console.log(user);
+            },
 
-  return res
-    .status(200)
-    .json(
-      new ApiRes(
-        200,
-        user[0].watchHistory,
-        "Watch History Fetched SuccessFully!!"
-      )
-    );
+            {
+              $addFields: {
+                owner: {
+                  $first: "$owner",
+                },
+              }, //this $addFields is used to Convert All Data into Owner fileds as Object so it easy to become for Frontend Developer
+            },
+          ],
+        },
+      },
+    ]);
+    console.log(user);
+
+    return res
+      .status(200)
+      .json(
+        new ApiRes(
+          200,
+          user[0].watchHistory,
+          "Watch History Fetched SuccessFully!!"
+        )
+      );
+  } catch (error) {
+    console.log(error);
+    throw new ApiError(500, "Internel Server Error");
+  }
 });
